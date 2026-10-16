@@ -1,6 +1,6 @@
 # homelab-infrastructure-automation
 
-*[Deutsche Version](README.md)*
+[Deutsche Version](README.md)
 
 Infrastructure as Code for my Proxmox homelab: Terraform creates VMs, Ansible configures them
 idempotently, GitHub Actions checks every push. New VMs ship their auth logs to Splunk via Cribl
@@ -18,7 +18,7 @@ without any extra step.
 | `terraform/` | bpg/proxmox provider, one VM as a linked clone of template 900, 1 vCPU / 1 GB, cloud-init with DHCP and SSH key, fixed MAC |
 | `ansible/roles/base` | Hostname, updates + unattended-upgrades, admin user `ops` (key only, sudo), SSH hardening, ufw (deny incoming, SSH rate-limited), fail2ban |
 | `ansible/roles/docker` | Docker Engine + Compose plugin from the official Docker repository |
-| `ansible/roles/rsyslog_cribl` | `auth,authpriv.* @192.168.178.91:9514`, hooks the VM into the SIEM pipeline |
+| `ansible/roles/rsyslog_cribl` | `auth,authpriv.* @<VM-IP>:9514`, hooks the VM into the SIEM pipeline |
 | `ansible/roles/soc_portal` | Deploys the SOC portal on siem-docker: git checkout via deploy key, `.env` from HashiCorp Vault, `docker compose` (playbook `soc-portal.yml`) |
 | `ansible/roles/ara` | [ARA Records Ansible](https://ara.recordsansible.org/) on siem-docker: web dashboard that records every playbook run with tasks, `changed`/`ok` and duration (playbook `ara.yml`) |
 | `ansible/roles/vault` + `terraform/vault` | HashiCorp Vault on siem-docker: deploy and unseal with Ansible, configuration (KV v2, audit log, policies, AppRoles) with Terraform |
@@ -46,10 +46,16 @@ Deploy the SOC portal (needs `.vault_pass`, see [docs/operations.en.md](docs/ope
 scripts/ansible.sh ansible-playbook playbooks/soc-portal.yml
 ```
 
-Every run through `scripts/ansible.sh` is recorded in the ARA dashboard at http://192.168.178.91:8091
+Every run through `scripts/ansible.sh` is recorded in the ARA dashboard at http://<VM-IP>:8091
 (see [docs/operations.en.md](docs/operations.en.md#ara-dashboard)).
 
 ![ARA: recorded playbook runs](docs/img/ara-playbooks.png)
+
+## Addresses
+
+The docs use placeholders instead of fixed IPs: `<VM-IP>` is the VM `siem-docker` running Splunk, Cribl, the
+portal, ARA and Vault, `<LAB-VM-IP>` the test VM created by Terraform, and `<PROXMOX-IP>` the Proxmox host. The
+real addresses are in the inventory (`ansible/inventory/hosts.yml`), the role defaults and `.env`.
 
 ## Documentation
 
@@ -59,8 +65,8 @@ Every run through `scripts/ansible.sh` is recorded in the ARA dashboard at http:
 
 ## Secrets
 
-The repository contains no plaintext secrets. Runtime secrets live in HashiCorp Vault: Terraform fetches
-the Proxmox API token through an AppRole as an ephemeral resource (not in the state), Ansible the portal
-configuration through `community.hashi_vault`. Each AppRole may only read its own secret, every access is in
-the audit log. Ansible Vault now only protects Vault's unseal key and root token; its password lives in
-`.vault_pass` (git-ignored). Details: [docs/operations.en.md](docs/operations.en.md#hashicorp-vault).
+Secrets are managed centrally in HashiCorp Vault. Terraform fetches the Proxmox API token at runtime through
+its own AppRole, as an ephemeral resource so the token never ends up in the state. Ansible reads the portal
+configuration through `community.hashi_vault`. Each AppRole can only reach its own secret, and every access is
+recorded in the audit log. Vault's own unseal key and root token are protected with Ansible Vault; its
+password is kept locally in `.vault_pass`. Details: [docs/operations.en.md](docs/operations.en.md#hashicorp-vault).

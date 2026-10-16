@@ -2,7 +2,7 @@
 
 PNG export: render each HTML file headless at scale 2 and screenshot the <svg> element (e.g. Playwright locator('svg').screenshot()).
 """
-import pathlib, sys
+import html, pathlib, sys
 
 OUT = pathlib.Path(sys.argv[1])
 
@@ -36,7 +36,7 @@ def label(cx, top, text, color):
     w += w % 2
     return f'''
   <rect x="{cx-w/2}" y="{top}" width="{w}" height="12" rx="2" fill="{PAPER}"/>
-  <text x="{cx}" y="{top+9}" fill="{color}" font-size="8" font-family="{MONO}" text-anchor="middle" letter-spacing="0.08em">{text}</text>'''
+  <text x="{cx}" y="{top+9}" fill="{color}" font-size="8" font-family="{MONO}" text-anchor="middle" letter-spacing="0.08em">{html.escape(text)}</text>'''
 
 
 def zone(x, y, w, h, text):
@@ -189,7 +189,7 @@ TEXT = {
         "actors": [("Admin-PC", "tf.sh · ansible.sh"), ("Proxmox VE", "API · pve"), ("lab-iac-01", "VM 220"),
                    ("Cribl → Splunk", "UDP 9514 · HEC"), ("SOC-Portal", ":8090")],
         "msgs": [(0, 1, "call", "APPLY · CLONE"), (1, 2, "async", "CLOUD-INIT"), (1, 0, "return", "ID=220 · 4 S"),
-                 (0, 1, "call", "VM-IP.SH"), (1, 0, "return", "192.168.178.83"),
+                 (0, 1, "call", "VM-IP.SH"), (1, 0, "return", "<LAB-VM-IP>"),
                  (0, 2, "call", "PLAYBOOK RUN 1"), (2, 0, "return", "CHANGED=18"),
                  (0, 2, "call", "PLAYBOOK RUN 2"), (2, 0, "headline", "CHANGED=0"),
                  (2, 3, "async", "AUTH-LOG"), (4, 3, "call", "REST-SUCHE"), (3, 4, "headline", "LAB-IAC-01")],
@@ -212,7 +212,7 @@ TEXT = {
         "actors": [("Admin PC", "tf.sh · ansible.sh"), ("Proxmox VE", "API · pve"), ("lab-iac-01", "VM 220"),
                    ("Cribl → Splunk", "UDP 9514 · HEC"), ("SOC portal", ":8090")],
         "msgs": [(0, 1, "call", "APPLY · CLONE"), (1, 2, "async", "CLOUD-INIT"), (1, 0, "return", "ID=220 · 4 S"),
-                 (0, 1, "call", "VM-IP.SH"), (1, 0, "return", "192.168.178.83"),
+                 (0, 1, "call", "VM-IP.SH"), (1, 0, "return", "<LAB-VM-IP>"),
                  (0, 2, "call", "PLAYBOOK RUN 1"), (2, 0, "return", "CHANGED=18"),
                  (0, 2, "call", "PLAYBOOK RUN 2"), (2, 0, "headline", "CHANGED=0"),
                  (2, 3, "async", "AUTH LOG"), (4, 3, "call", "REST SEARCH"), (3, 4, "headline", "LAB-IAC-01")],

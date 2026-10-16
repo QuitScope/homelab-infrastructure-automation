@@ -1,9 +1,9 @@
 # Testprotokoll
 
-*[English version](test-protocol.en.md)*
+[English version](test-protocol.en.md)
 
 Alle Befehle sind am 16.10.2026 tatsächlich gegen das Homelab gelaufen (Proxmox VE 9.2.11, Node `pve`).
-Die Ausgaben sind gekürzt, aber nicht verändert. Die IP des Admin-PCs ist durch `<admin-pc>` ersetzt.
+Die Ausgaben sind gekürzt, aber nicht verändert. IP-Adressen sind durch Platzhalter ersetzt (`<VM-IP>`, `<LAB-VM-IP>`, `<ADMIN-PC-IP>`, siehe README).
 
 Werkzeuge: Terraform 1.16.6 (`hashicorp/terraform`), bpg/proxmox 0.116.1, ansible-core 2.21.5,
 ansible-lint 26.10.1, yamllint 1.38.0, ansible.posix 2.2.2, community.general 13.5.0, community.docker 5.4.0, ara 1.8.0, community.hashi_vault 7.1.0,
@@ -71,8 +71,8 @@ vm-220-disk-0   pve Vwi-aotz--  32.00g data base-900-disk-0 2.79   # Linked Clon
 
 ```
 $ scripts/vm-ip.sh
-192.168.178.94
-$ LAB_VM_IP=192.168.178.94 scripts/ansible.sh ansible-playbook playbooks/site.yml
+<LAB-VM-IP>
+$ LAB_VM_IP=<LAB-VM-IP> scripts/ansible.sh ansible-playbook playbooks/site.yml
 lab-iac-01 : ok=25   changed=16   unreachable=0    failed=0
 $ (zweiter Lauf)
 TASK [base : Start fail2ban]
@@ -106,12 +106,12 @@ proxmox_virtual_environment_vm.lab: Creation complete after 4s [id=220]
 Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
 
 $ scripts/vm-ip.sh
-192.168.178.83   # neue Lease trotz gleicher MAC
+<LAB-VM-IP>   # andere Adresse als beim ersten Apply (neue DHCP-Lease)
 
-$ LAB_VM_IP=192.168.178.83 scripts/ansible.sh ansible-playbook playbooks/site.yml     (140 s)
+$ LAB_VM_IP=<LAB-VM-IP> scripts/ansible.sh ansible-playbook playbooks/site.yml     (140 s)
 lab-iac-01 : ok=27   changed=18   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 
-$ LAB_VM_IP=192.168.178.83 scripts/ansible.sh ansible-playbook playbooks/site.yml     (30 s)
+$ LAB_VM_IP=<LAB-VM-IP> scripts/ansible.sh ansible-playbook playbooks/site.yml     (30 s)
 lab-iac-01 : ok=24   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 ```
 
@@ -126,7 +126,7 @@ vm-220-disk-0   base-900-disk-0   9.90%   32.00g   # ca. 3,2 GB tatsächlich bel
 ## 6. Zustand der VM
 
 ```
-$ ssh ops@192.168.178.83 ...
+$ ssh ops@<LAB-VM-IP> ...
 lab-iac-01
 Status: active
 Default: deny (incoming), allow (outgoing), deny (routed)
@@ -141,7 +141,7 @@ Docker Compose version v5.6.0
 Hello from Docker!
 active active active   # fail2ban, rsyslog, docker
 Status for the jail: sshd
-auth,authpriv.* @192.168.178.91:9514
+auth,authpriv.* @<VM-IP>:9514
 ```
 
 `permitrootlogin without-password` ist der von `sshd -T` normalisierte Name für `prohibit-password`.
@@ -151,24 +151,24 @@ auth,authpriv.* @192.168.178.91:9514
 Test-Logins von außen, beide werden wie gewollt abgewiesen:
 
 ```
-$ ssh -o PubkeyAuthentication=no iac-portal-test@192.168.178.83
-iac-portal-test@192.168.178.83: Permission denied (publickey).
-$ ssh -o PubkeyAuthentication=no root@192.168.178.83
-root@192.168.178.83: Permission denied (publickey).
+$ ssh -o PubkeyAuthentication=no iac-portal-test@<LAB-VM-IP>
+iac-portal-test@<LAB-VM-IP>: Permission denied (publickey).
+$ ssh -o PubkeyAuthentication=no root@<LAB-VM-IP>
+root@<LAB-VM-IP>: Permission denied (publickey).
 ```
 
 Rund eine Minute später, ohne Änderung am Portal oder an Splunk:
 
 ```
-$ curl -s http://192.168.178.91:8090/api/hosts
+$ curl -s http://<VM-IP>:8090/api/hosts
 { "host": "lab-iac-01", "events": 10, "failures": 1, "sources": 1,
   "lastSeen": "2026-10-16T12:07:20.000Z",
   "eventTypes": { "authentication": 6, "sudo": 4 }, "openIncidents": 0 }
 
-$ curl -s http://192.168.178.91:8090/api/topology
+$ curl -s http://<VM-IP>:8090/api/topology
 { "id": "host:lab-iac-01", "type": "host", "label": "lab-iac-01", "status": "active",
   "meta": { "Typ": "Linux-Host (rsyslog)", "Ereignisse": 10, ... } }
-{ "id": "e:<admin-pc>:lab-iac-01", "source": "src:<admin-pc>", "target": "host:lab-iac-01", "label": "1 Fehlversuche" }
+{ "id": "e:<ADMIN-PC-IP>:lab-iac-01", "source": "src:<ADMIN-PC-IP>", "target": "host:lab-iac-01", "label": "1 Fehlversuche" }
 { "id": "e:lab-iac-01:cribl", "source": "host:lab-iac-01", "target": "cribl", "label": "syslog UDP 9514" }
 ```
 
@@ -190,8 +190,8 @@ Die `.env` von siem-docker wurde direkt per Pipe verschlüsselt, ohne Klartext a
 Prüfung über Hashes:
 
 ```
-$ ssh root@192.168.178.91 'cat /opt/homelab-soc-portal/.env' | scripts/ansible.sh ansible-vault encrypt --output playbooks/files/siem-docker/soc-portal.env.vault
-$ ssh root@192.168.178.91 'sha256sum < /opt/homelab-soc-portal/.env'
+$ ssh root@<VM-IP> 'cat /opt/homelab-soc-portal/.env' | scripts/ansible.sh ansible-vault encrypt --output playbooks/files/siem-docker/soc-portal.env.vault
+$ ssh root@<VM-IP> 'sha256sum < /opt/homelab-soc-portal/.env'
 f34f8fbaf21353ab2ceb68b5d3d52c9a774a718bf136a5d0df8b1c3e1f1e9946  -
 $ scripts/ansible.sh sh -c 'ansible-vault view playbooks/files/siem-docker/soc-portal.env.vault | sha256sum'
 f34f8fbaf21353ab2ceb68b5d3d52c9a774a718bf136a5d0df8b1c3e1f1e9946  -
@@ -249,17 +249,17 @@ Weitere Läufe, die ARA aufgezeichnet hat:
 ```
 $ scripts/ansible.sh ansible-playbook playbooks/soc-portal.yml
 siem-docker : ok=9    changed=0    unreachable=0    failed=0    skipped=1
-$ LAB_VM_IP=192.168.178.83 scripts/ansible.sh ansible-playbook playbooks/site.yml
+$ LAB_VM_IP=<LAB-VM-IP> scripts/ansible.sh ansible-playbook playbooks/site.yml
 lab-iac-01  : ok=24   changed=0    unreachable=0    failed=0
 
-$ curl http://192.168.178.91:8091/api/v1/playbooks   (+ /hosts je Playbook)
+$ curl http://<VM-IP>:8091/api/v1/playbooks   (+ /hosts je Playbook)
 4 site.yml        lab-iac-01   changed=0  ok=24  failed=0
 3 soc-portal.yml  siem-docker  changed=0  ok=9   failed=0
 2 ara.yml         siem-docker  changed=0  ok=5   failed=0
 1 ara.yml         siem-docker  changed=2  ok=5   failed=0
 ```
 
-Keine Secrets in ARA:
+Was ARA von Secrets zu sehen bekommt:
 
 ```
 Task "Install portal configuration from Ansible Vault" → {"censored": "the output has been hidden due to
@@ -271,7 +271,7 @@ Playbook 3 files     → soc-portal.yml, roles/soc_portal/defaults/main.yml, rol
 Server nicht erreichbar (falscher Port), das Playbook läuft trotzdem durch:
 
 ```
-$ ARA_API_SERVER=http://192.168.178.91:9 scripts/ansible.sh ansible-playbook playbooks/ara.yml
+$ ARA_API_SERVER=http://<VM-IP>:9 scripts/ansible.sh ansible-playbook playbooks/ara.yml
 [WARNING]: Callback dispatch 'v2_playbook_on_start' failed for plugin 'ara_default': … Connection refused
 siem-docker : ok=5    changed=0    unreachable=0    failed=0                  (exit 0)
 ```
@@ -295,7 +295,7 @@ $ANSIBLE_VAULT;1.1;AES256   # Klartext nie auf Platte oder im Terminal
 
 $ scripts/ansible.sh ansible-playbook playbooks/vault.yml   → ok=7  changed=1   (entsiegelt)
 $ scripts/ansible.sh ansible-playbook playbooks/vault.yml   → ok=6  changed=0
-$ curl http://192.168.178.91:8200/v1/sys/seal-status
+$ curl http://<VM-IP>:8200/v1/sys/seal-status
 {'initialized': True, 'sealed': False, 'version': '2.2.0', 'storage_type': 'raft'}
 ```
 

@@ -1,6 +1,6 @@
 # Betrieb
 
-*[English version](operations.en.md)*
+[English version](operations.en.md)
 
 ## Einmalige Einrichtung
 
@@ -46,14 +46,14 @@ scripts/ansible.sh true   # baut das Image homelab-ansible (ansible-core, Collec
 | Änderungen ansehen | `scripts/tf.sh plan` |
 | VM anlegen/anpassen | `scripts/tf.sh apply` |
 | IP der VM | `scripts/vm-ip.sh` (oder `scripts/vm-ip.sh <MAC>`) |
-| VM konfigurieren | `LAB_VM_IP=<ip> scripts/ansible.sh ansible-playbook playbooks/site.yml` |
+| VM konfigurieren | `LAB_VM_IP=<LAB-VM-IP> scripts/ansible.sh ansible-playbook playbooks/site.yml` |
 | Nur prüfen, nichts ändern | `... ansible-playbook playbooks/site.yml --check --diff` |
 | Lints lokal wie in der CI | `scripts/ansible.sh sh -c 'cd /work && yamllint --strict . && cd ansible && ansible-lint'` |
 | VM entfernen | `scripts/tf.sh destroy` |
 
 Nach `destroy` und erneutem `apply` hat die VM neue Host-Keys. Die Ansible-Container starten jedes Mal
 mit leerer `known_hosts`, dort ist das kein Problem. Für eigene SSH-Sitzungen zuerst
-`ssh-keygen -R <ip>` ausführen. Die FritzBox vergibt trotz fester MAC nicht zwingend dieselbe IP,
+`ssh-keygen -R <LAB-VM-IP>` ausführen. Die FritzBox vergibt trotz fester MAC nicht zwingend dieselbe IP,
 deshalb die IP nach jedem `apply` neu mit `vm-ip.sh` ermitteln.
 
 ## SOC-Portal deployen
@@ -75,7 +75,7 @@ Einmalige Voraussetzungen:
 2. Deploy-Key: Die Rolle erzeugt beim ersten Lauf `/root/.ssh/homelab-soc-portal-deploy` auf siem-docker.
    Der öffentliche Schlüssel muss einmal als read-only Deploy-Key im Portal-Repo hinterlegt werden:
    ```bash
-   ssh root@192.168.178.91 cat /root/.ssh/homelab-soc-portal-deploy.pub > deploy.pub
+   ssh root@<VM-IP> cat /root/.ssh/homelab-soc-portal-deploy.pub > deploy.pub
    gh repo deploy-key add deploy.pub --repo QuitScope/homelab-soc-portal --title "siem-docker (Ansible, read-only)"
    ```
 
@@ -94,7 +94,7 @@ Verzeichnis wird nach `/opt/homelab-soc-portal.pre-ansible` verschoben. Nach ein
 
 [ARA Records Ansible](https://ara.recordsansible.org/) zeichnet jeden Playbook-Lauf auf: Hosts, Tasks,
 `changed`/`ok`/`failed`, Diffs, Dauer und die verwendeten Playbook-Dateien. Weboberfläche und API:
-http://192.168.178.91:8091 (nur im LAN).
+http://<VM-IP>:8091 (nur im LAN).
 
 ```bash
 scripts/ansible.sh ansible-playbook playbooks/ara.yml           # Server deployen/aktualisieren
@@ -111,11 +111,11 @@ ARA_API_SERVER= scripts/ansible.sh ansible-playbook ...         # einzelnen Lauf
 - Grenze: Das Dashboard hat keine Anmeldung und ist nur an die LAN-Adresse gebunden. Wer im LAN ist,
   kann Läufe lesen und schreiben. Nächster Schritt wäre `ARA_READ_LOGIN_REQUIRED`/`ARA_WRITE_LOGIN_REQUIRED`
   mit einem Benutzer, dessen Passwort im Vault liegt.
-- Aufräumen: `ssh root@192.168.178.91 docker exec ara-ara-1 ara playbook prune --days 30 --confirm`.
+- Aufräumen: `ssh root@<VM-IP> docker exec ara-ara-1 ara playbook prune --days 30 --confirm`.
 
 ## HashiCorp Vault
 
-Vault (2.2.0, Raft-Storage) läuft auf siem-docker unter http://192.168.178.91:8200 (nur LAN, HTTP).
+Vault (2.2.0, Raft-Storage) läuft auf siem-docker unter http://<VM-IP>:8200 (nur LAN, HTTP).
 Er hält die Secrets, die Terraform und Ansible zur Laufzeit holen:
 
 | Pfad (KV v2, Mount `homelab`) | Feld | Leser (AppRole → Policy) |
@@ -149,7 +149,7 @@ Betrieb:
 | Portal-Konfiguration ändern | Neue `.env` per `vault kv put` bzw. erneut `vault-seed.sh`, dann `playbooks/soc-portal.yml` |
 | Proxmox-Token rotieren | Neuen Token anlegen (siehe oben), Wert in `homelab/proxmox` schreiben. `.env` bleibt unverändert |
 | AppRole-Secret-ID rotieren | `TF_DIR=terraform/vault scripts/vault-admin.sh scripts/tf.sh apply -replace='vault_approle_auth_backend_role_secret_id.consumer["ansible"]'`, dann `vault-seed.sh` |
-| Wer hat was gelesen? | `ssh root@192.168.178.91 docker exec vault-vault-1 cat /vault/logs/audit.log` (JSON, Werte als HMAC) |
+| Wer hat was gelesen? | `ssh root@<VM-IP> docker exec vault-vault-1 cat /vault/logs/audit.log` (JSON, Werte als HMAC) |
 | Backup | `docker exec vault-vault-1 vault operator raft snapshot save /vault/file/backup.snap` (mit Root-Token) |
 
 Wichtig: Unseal-Key und Root-Token liegen nur in `playbooks/files/siem-docker/vault-init.json.vault`,

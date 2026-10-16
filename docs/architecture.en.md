@@ -1,6 +1,6 @@
 # Architecture
 
-*[Deutsche Version](architecture.md)*
+[Deutsche Version](architecture.md)
 
 ## Overview
 

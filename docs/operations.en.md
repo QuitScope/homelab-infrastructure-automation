@@ -1,6 +1,6 @@
 # Operations
 
-*[Deutsche Version](operations.md)*
+[Deutsche Version](operations.md)
 
 ## One-time setup
 
@@ -46,14 +46,14 @@ scripts/ansible.sh true   # builds the homelab-ansible image (ansible-core, coll
 | Review changes | `scripts/tf.sh plan` |
 | Create/update the VM | `scripts/tf.sh apply` |
 | VM IP address | `scripts/vm-ip.sh` (or `scripts/vm-ip.sh <MAC>`) |
-| Configure the VM | `LAB_VM_IP=<ip> scripts/ansible.sh ansible-playbook playbooks/site.yml` |
+| Configure the VM | `LAB_VM_IP=<LAB-VM-IP> scripts/ansible.sh ansible-playbook playbooks/site.yml` |
 | Check only, change nothing | `... ansible-playbook playbooks/site.yml --check --diff` |
 | Run the CI lints locally | `scripts/ansible.sh sh -c 'cd /work && yamllint --strict . && cd ansible && ansible-lint'` |
 | Remove the VM | `scripts/tf.sh destroy` |
 
 After `destroy` and another `apply` the VM has new host keys. The Ansible container starts with an
 empty `known_hosts` every time, so that is no problem there. For your own SSH sessions run
-`ssh-keygen -R <ip>` first. The FritzBox does not necessarily hand out the same IP despite the fixed
+`ssh-keygen -R <LAB-VM-IP>` first. The FritzBox does not necessarily hand out the same IP despite the fixed
 MAC, so look the IP up again with `vm-ip.sh` after every `apply`.
 
 ## Deploying the SOC portal
@@ -75,7 +75,7 @@ One-time prerequisites:
 2. Deploy key: the role creates `/root/.ssh/homelab-soc-portal-deploy` on siem-docker on the first run.
    Add the public key once as a read-only deploy key to the portal repository:
    ```bash
-   ssh root@192.168.178.91 cat /root/.ssh/homelab-soc-portal-deploy.pub > deploy.pub
+   ssh root@<VM-IP> cat /root/.ssh/homelab-soc-portal-deploy.pub > deploy.pub
    gh repo deploy-key add deploy.pub --repo QuitScope/homelab-soc-portal --title "siem-docker (Ansible, read-only)"
    ```
 
@@ -94,7 +94,7 @@ directory is moved to `/opt/homelab-soc-portal.pre-ansible`. It can be deleted a
 
 [ARA Records Ansible](https://ara.recordsansible.org/) records every playbook run: hosts, tasks,
 `changed`/`ok`/`failed`, diffs, duration and the playbook files used. Web UI and API:
-http://192.168.178.91:8091 (LAN only).
+http://<VM-IP>:8091 (LAN only).
 
 ```bash
 scripts/ansible.sh ansible-playbook playbooks/ara.yml           # deploy/update the server
@@ -111,11 +111,11 @@ ARA_API_SERVER= scripts/ansible.sh ansible-playbook ...         # do not record 
 - Limit: the dashboard has no login and is only bound to the LAN address. Anyone on the LAN can read and
   write runs. Next step: `ARA_READ_LOGIN_REQUIRED`/`ARA_WRITE_LOGIN_REQUIRED` with a user whose password lives
   in the vault.
-- Clean up: `ssh root@192.168.178.91 docker exec ara-ara-1 ara playbook prune --days 30 --confirm`.
+- Clean up: `ssh root@<VM-IP> docker exec ara-ara-1 ara playbook prune --days 30 --confirm`.
 
 ## HashiCorp Vault
 
-Vault (2.2.0, Raft storage) runs on siem-docker at http://192.168.178.91:8200 (LAN only, HTTP). It holds
+Vault (2.2.0, Raft storage) runs on siem-docker at http://<VM-IP>:8200 (LAN only, HTTP). It holds
 the secrets that Terraform and Ansible fetch at runtime:
 
 | Path (KV v2, mount `homelab`) | Field | Reader (AppRole → policy) |
@@ -149,7 +149,7 @@ Operations:
 | Change the portal configuration | Write the new `.env` with `vault kv put` or re-run `vault-seed.sh`, then `playbooks/soc-portal.yml` |
 | Rotate the Proxmox token | Create a new token (see above), write it to `homelab/proxmox`. `.env` stays unchanged |
 | Rotate an AppRole secret ID | `TF_DIR=terraform/vault scripts/vault-admin.sh scripts/tf.sh apply -replace='vault_approle_auth_backend_role_secret_id.consumer["ansible"]'`, then `vault-seed.sh` |
-| Who read what? | `ssh root@192.168.178.91 docker exec vault-vault-1 cat /vault/logs/audit.log` (JSON, values HMAC'd) |
+| Who read what? | `ssh root@<VM-IP> docker exec vault-vault-1 cat /vault/logs/audit.log` (JSON, values HMAC'd) |
 | Backup | `docker exec vault-vault-1 vault operator raft snapshot save /vault/file/backup.snap` (with the root token) |
 
 Important: the unseal key and root token only live in `playbooks/files/siem-docker/vault-init.json.vault`,

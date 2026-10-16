@@ -1,6 +1,6 @@
 # Architektur
 
-*[English version](architecture.en.md)*
+[English version](architecture.en.md)
 
 ## Überblick
 
