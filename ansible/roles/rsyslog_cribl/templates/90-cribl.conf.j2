@@ -1,0 +1,3 @@
+# {{ ansible_managed }}
+# Single @ = UDP. Cribl parses these into Splunk index=homelab_auth, the SOC portal reads them from there.
+{{ rsyslog_cribl_selector }} @{{ rsyslog_cribl_host }}:{{ rsyslog_cribl_port }}

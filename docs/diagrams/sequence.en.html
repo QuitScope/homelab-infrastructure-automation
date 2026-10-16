@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homelab IaC: lifecycle of a new VM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #f5f5f5;
+      --color-ink: #2d3142;
+      --color-muted: #4f5d75;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink);
+           min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 1280px; width: 100%; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    .diagram-container { overflow-x: auto; }
+    svg { width: 100%; min-width: 1280px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Sequence · homelab-infrastructure-automation</p>
+    <h1>A new VM in five minutes: cloned, configured, monitored</h1>
+    <div class="diagram-container">
+    <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequence-en-title sequence-en-desc">
+  <title id="sequence-en-title">Homelab IaC: lifecycle of a new VM</title>
+  <desc id="sequence-en-desc">Terraform clones VM 220, vm-ip.sh finds its address, the second Ansible run reports changed=0, and after a test login the SOC portal lists host lab-iac-01.</desc>
+  <defs>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.9" fill="rgba(45,49,66,0.10)"/></pattern>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+    <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker>
+    <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+    <marker id="arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0, 8 3, 0 6" fill="none" stroke="#4f5d75" stroke-width="1.2"/></marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#f5f5f5"/>
+  <rect width="100%" height="100%" fill="url(#dots)" opacity="0.55"/>
+<line x1="160" y1="120" x2="160" y2="584" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="400" y1="120" x2="400" y2="584" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="640" y1="120" x2="640" y2="584" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="880" y1="120" x2="880" y2="584" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="1120" y1="120" x2="1120" y2="584" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+  <rect x="156" y="152" width="8" height="308" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+  <rect x="396" y="152" width="8" height="88" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+  <rect x="396" y="260" width="8" height="52" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+  <rect x="636" y="332" width="8" height="124" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+  <rect x="876" y="512" width="8" height="52" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+  <rect x="1116" y="512" width="8" height="52" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+  <line x1="164" y1="160" x2="396" y2="160" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+  
+  <rect x="237.0" y="140" width="86" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="280.0" y="149" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">APPLY · CLONE</text>
+  <line x1="404" y1="196" x2="640" y2="196" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-open)"/>
+  
+  <rect x="488.0" y="176" width="68" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="522.0" y="185" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CLOUD-INIT</text>
+  <line x1="396" y1="232" x2="164" y2="232" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  
+  <rect x="240.0" y="212" width="80" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="280.0" y="221" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ID=220 · 4 S</text>
+  <line x1="164" y1="268" x2="396" y2="268" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+  
+  <rect x="251.0" y="248" width="58" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="280.0" y="257" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">VM-IP.SH</text>
+  <line x1="396" y1="304" x2="164" y2="304" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  
+  <rect x="235.0" y="284" width="90" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="280.0" y="293" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">192.168.178.83</text>
+  <line x1="164" y1="340" x2="636" y2="340" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+  
+  <rect x="355.0" y="320" width="90" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="400.0" y="329" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PLAYBOOK RUN 1</text>
+  <line x1="636" y1="376" x2="164" y2="376" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  
+  <rect x="366.0" y="356" width="68" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="400.0" y="365" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CHANGED=18</text>
+  <line x1="164" y1="412" x2="636" y2="412" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+  
+  <rect x="355.0" y="392" width="90" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="400.0" y="401" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PLAYBOOK RUN 2</text>
+  <line x1="636" y1="448" x2="164" y2="448" stroke="#bf4520" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+  
+  <rect x="369.0" y="428" width="62" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="400.0" y="437" fill="#bf4520" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CHANGED=0</text>
+  <line x1="640" y1="484" x2="880" y2="484" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-open)"/>
+  
+  <rect x="731.0" y="464" width="58" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="760.0" y="473" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">AUTH LOG</text>
+  <line x1="1116" y1="520" x2="884" y2="520" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+  
+  <rect x="963.0" y="500" width="74" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="1000.0" y="509" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">REST SEARCH</text>
+  <line x1="884" y1="556" x2="1116" y2="556" stroke="#bf4520" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+  
+  <rect x="966.0" y="536" width="68" height="12" rx="2" fill="#f5f5f5"/>
+  <text x="1000.0" y="545" fill="#bf4520" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">LAB-IAC-01</text>
+  
+  <rect x="72" y="64" width="176" height="56" rx="6" fill="#f5f5f5"/>
+  <rect x="72" y="64" width="176" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+  <text x="160" y="88" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Admin PC</text>
+  <text x="160" y="104" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">tf.sh · ansible.sh</text>
+  
+  <rect x="312" y="64" width="176" height="56" rx="6" fill="#f5f5f5"/>
+  <rect x="312" y="64" width="176" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+  <text x="400" y="88" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Proxmox VE</text>
+  <text x="400" y="104" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">API · pve</text>
+  
+  <rect x="552" y="64" width="176" height="56" rx="6" fill="#f5f5f5"/>
+  <rect x="552" y="64" width="176" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+  <text x="640" y="88" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">lab-iac-01</text>
+  <text x="640" y="104" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">VM 220</text>
+  
+  <rect x="792" y="64" width="176" height="56" rx="6" fill="#f5f5f5"/>
+  <rect x="792" y="64" width="176" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+  <text x="880" y="88" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Cribl → Splunk</text>
+  <text x="880" y="104" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">UDP 9514 · HEC</text>
+  
+  <rect x="1032" y="64" width="176" height="56" rx="6" fill="#f5f5f5"/>
+  <rect x="1032" y="64" width="176" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+  <text x="1120" y="88" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SOC portal</text>
+  <text x="1120" y="104" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">:8090</text>
+  
+  <line x1="40" y1="604" x2="1240" y2="604" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+  <text x="40" y="620" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+  <line x1="40" y1="641" x2="62" y2="641" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <text x="70" y="644" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Call</text>
+  <line x1="120" y1="641" x2="142" y2="641" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  <text x="150" y="644" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Return</text>
+  <line x1="210" y1="641" x2="232" y2="641" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-open)"/>
+  <text x="240" y="644" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Async</text>
+  <line x1="295" y1="641" x2="317" y2="641" stroke="#bf4520" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+  <text x="325" y="644" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Proof</text>
+    </svg>
+    </div>
+  </div>
+</body>
+</html>

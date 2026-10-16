@@ -1,0 +1,91 @@
+---
+- name: Set hostname to the inventory name
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Install upgrades
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    upgrade: safe
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+
+- name: Enable unattended upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create admin user
+  ansible.builtin.user:
+    name: "{{ base_admin_user }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+
+- name: Authorize SSH key for admin user
+  ansible.posix.authorized_key:
+    user: "{{ base_admin_user }}"
+    key: "{{ base_admin_pubkey }}"
+    exclusive: true
+
+- name: Allow passwordless sudo for admin user (key-only account, no password set)
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ base_admin_user }}"
+    content: "{{ base_admin_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: visudo -cf %s
+
+# In sshd_config.d the first value wins, so 10- overrides 50-cloud-init.conf.
+- name: Harden SSH daemon
+  ansible.builtin.template:
+    src: sshd-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: sshd -t -f %s
+  notify: Restart ssh
+
+- name: Allow SSH in ufw (rate limited)
+  community.general.ufw:
+    rule: limit
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ base_ufw_allowed_tcp_ports }}"
+
+- name: Enable ufw with default deny for incoming traffic
+  community.general.ufw:
+    state: enabled
+    default: deny
+    direction: incoming
+
+# The template ships without rsyslog, so /var/log/auth.log may not exist yet;
+# reading the journal keeps fail2ban independent of it.
+- name: Read sshd logins from the journal in fail2ban
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.d/sshd.local
+    content: |
+      [sshd]
+      enabled = true
+      backend = systemd
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: Start fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true

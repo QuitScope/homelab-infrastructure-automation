@@ -1,0 +1,52 @@
+---
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        dir: [terraform, terraform/vault]
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.6
+      - name: terraform fmt
+        run: terraform fmt -check
+      - name: terraform init
+        run: terraform init -backend=false -input=false
+      - name: terraform validate
+        run: terraform validate
+
+  ansible:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ansible/requirements.txt
+      - name: Install Ansible tooling
+        run: |
+          pip install -r ansible/requirements.txt
+          ansible-galaxy collection install -r ansible/requirements.yml
+      - name: yamllint
+        run: yamllint --strict .
+      - name: ansible-lint
+        working-directory: ansible
+        run: ansible-lint
+      - name: ansible-playbook --syntax-check
+        working-directory: ansible
+        run: ansible-playbook --syntax-check playbooks/site.yml playbooks/soc-portal.yml playbooks/ara.yml playbooks/vault.yml

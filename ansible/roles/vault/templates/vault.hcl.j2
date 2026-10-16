@@ -1,0 +1,18 @@
+# {{ ansible_managed }}
+ui            = true
+# Integrated storage (Raft) recommends disabling mlock.
+disable_mlock = true
+
+storage "raft" {
+  path    = "/vault/file"
+  node_id = "{{ inventory_hostname }}"
+}
+
+# TLS is off because the listener is LAN-only; see docs/operations.md for the TLS next step.
+listener "tcp" {
+  address     = "0.0.0.0:8200"
+  tls_disable = true
+}
+
+api_addr     = "{{ vault_addr }}"
+cluster_addr = "http://127.0.0.1:8201"

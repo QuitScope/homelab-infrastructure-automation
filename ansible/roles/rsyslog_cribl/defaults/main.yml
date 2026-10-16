@@ -1,0 +1,5 @@
+---
+# Cribl Stream syslog source on siem-docker; Cribl forwards to Splunk index=homelab_auth.
+rsyslog_cribl_host: 192.168.178.91
+rsyslog_cribl_port: 9514
+rsyslog_cribl_selector: "auth,authpriv.*"

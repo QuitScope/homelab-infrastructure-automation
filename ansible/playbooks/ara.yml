@@ -1,0 +1,9 @@
+---
+# ARA records every playbook run (tasks, changed/ok, diffs, duration) and shows it in a web UI.
+# scripts/ansible.sh sends results there through the ARA callback plugin.
+- name: Deploy ARA Records Ansible
+  hosts: siem
+  become: true
+
+  roles:
+    - ara

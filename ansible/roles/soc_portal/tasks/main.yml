@@ -1,0 +1,64 @@
+---
+- name: Install git
+  ansible.builtin.apt:
+    name: git
+    state: present
+
+# The public key has to be added to the GitHub repository once as a read-only deploy key.
+- name: Create deploy key for the portal repository
+  ansible.builtin.command:
+    cmd: ssh-keygen -q -t ed25519 -N "" -C "{{ inventory_hostname }}-soc-portal-deploy" -f {{ soc_portal_deploy_key }}
+    creates: "{{ soc_portal_deploy_key }}"
+
+- name: Look for an existing checkout
+  ansible.builtin.stat:
+    path: "{{ soc_portal_dir }}/.git"
+  register: soc_portal_git_dir
+
+- name: Look for an existing deployment directory
+  ansible.builtin.stat:
+    path: "{{ soc_portal_dir }}"
+  register: soc_portal_dir_stat
+
+# One-time migration: the first deployment was copied with git archive, so it is no checkout.
+# The running container keeps working; it only uses a named volume, no bind mounts.
+- name: Move a deployment that predates Ansible aside
+  ansible.builtin.command:
+    cmd: mv {{ soc_portal_dir }} {{ soc_portal_dir }}.pre-ansible
+    creates: "{{ soc_portal_dir }}.pre-ansible"
+  when: soc_portal_dir_stat.stat.exists and not soc_portal_git_dir.stat.exists
+
+- name: Check out the portal
+  ansible.builtin.git:
+    repo: "{{ soc_portal_repo }}"
+    dest: "{{ soc_portal_dir }}"
+    version: "{{ soc_portal_version }}"
+    key_file: "{{ soc_portal_deploy_key }}"
+    accept_newhostkey: true
+  register: soc_portal_checkout
+
+# Lookup runs on the control node: VAULT_ADDR and the AppRole come from scripts/ansible.sh.
+- name: Install portal configuration from HashiCorp Vault
+  ansible.builtin.copy:
+    content: "{{ lookup('community.hashi_vault.vault_kv2_get', soc_portal_vault_secret, engine_mount_point=soc_portal_vault_mount).secret.env }}"
+    dest: "{{ soc_portal_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+# Rebuild only when the code changed; a changed .env alone just recreates the container.
+- name: Build and start the portal
+  community.docker.docker_compose_v2:
+    project_src: "{{ soc_portal_dir }}"
+    project_name: "{{ soc_portal_project_name }}"
+    build: "{{ 'always' if soc_portal_checkout is changed else 'policy' }}"
+    state: present
+
+- name: Wait until the portal reports healthy
+  ansible.builtin.uri:
+    url: "http://{{ ansible_host }}:{{ soc_portal_port }}/api/health"
+  register: soc_portal_health
+  until: soc_portal_health.status == 200
+  retries: 20
+  delay: 3

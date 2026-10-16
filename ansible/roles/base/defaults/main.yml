@@ -1,0 +1,12 @@
+---
+base_admin_user: ops
+base_admin_pubkey: "{{ lookup('ansible.builtin.file', '~/.ssh/id_ed25519.pub') }}"
+# Root keeps key-only access for bootstrapping; set to "no" once all automation uses base_admin_user.
+base_permit_root_login: prohibit-password
+base_packages:
+  - ufw
+  - unattended-upgrades
+  - fail2ban
+  - python3-systemd
+base_ufw_allowed_tcp_ports:
+  - "22"

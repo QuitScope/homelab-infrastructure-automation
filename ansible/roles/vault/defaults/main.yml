@@ -1,0 +1,10 @@
+---
+vault_dir: /opt/vault
+vault_project_name: vault
+vault_image: docker.io/hashicorp/vault:2.2.0
+# LAN only, plain HTTP: bind to the host's LAN address, never forward this port on the router.
+vault_bind: "{{ ansible_host }}"
+vault_port: 8200
+vault_addr: "http://{{ vault_bind }}:{{ vault_port }}"
+# Output of `vault operator init` (unseal key, root token), Ansible Vault encrypted by scripts/vault-init.sh.
+vault_init_file: "{{ inventory_hostname }}/vault-init.json.vault"

@@ -1,0 +1,9 @@
+---
+ara_dir: /opt/ara
+ara_project_name: ara
+# Upstream only publishes rolling tags, so the digest pins the exact image (ARA 1.8.0).
+ara_image: docker.io/recordsansible/ara-api:latest@sha256:9dfd6e18f474c2437081a0397310a264aa368b8364aea772c3b5b22bdd788cf5
+# LAN only: bind to the host's LAN address, never forward this port on the router.
+ara_bind: "{{ ansible_host }}"
+ara_port: 8091
+ara_time_zone: Europe/Berlin

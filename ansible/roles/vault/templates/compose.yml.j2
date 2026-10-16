@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+services:
+  vault:
+    image: {{ vault_image }}
+    restart: unless-stopped
+    command: server
+    ports:
+      - "{{ vault_bind }}:{{ vault_port }}:8200"
+    environment:
+      SKIP_SETCAP: "true"
+    volumes:
+      - ./vault.hcl:/vault/config/vault.hcl:ro
+      # Raft data and the file audit log.
+      - vault-data:/vault/file
+      - vault-logs:/vault/logs
+    mem_limit: 384m
+
+volumes:
+  vault-data:
+  vault-logs:

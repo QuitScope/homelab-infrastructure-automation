@@ -1,0 +1,60 @@
+---
+- name: Create Vault directory
+  ansible.builtin.file:
+    path: "{{ vault_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install Vault server configuration
+  ansible.builtin.template:
+    src: vault.hcl.j2
+    dest: "{{ vault_dir }}/vault.hcl"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Vault
+
+- name: Install Vault compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ vault_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start Vault server
+  community.docker.docker_compose_v2:
+    project_src: "{{ vault_dir }}"
+    project_name: "{{ vault_project_name }}"
+    state: present
+
+# A restart seals Vault, so it has to happen before the unseal check below.
+- name: Apply pending Vault restart
+  ansible.builtin.meta: flush_handlers
+
+- name: Read seal status
+  ansible.builtin.uri:
+    url: "{{ vault_addr }}/v1/sys/seal-status"
+  register: vault_seal
+  until: vault_seal.status == 200
+  retries: 20
+  delay: 3
+
+- name: Stop here until Vault is initialised
+  ansible.builtin.debug:
+    msg: "Vault is not initialised yet. Run scripts/vault-init.sh, then this playbook again."
+  when: not vault_seal.json.initialized
+
+# The unseal key comes from the Ansible Vault encrypted init output; the file lookup decrypts it.
+- name: Unseal Vault
+  ansible.builtin.uri:
+    url: "{{ vault_addr }}/v1/sys/unseal"
+    method: PUT
+    body_format: json
+    body:
+      key: "{{ (lookup('ansible.builtin.file', vault_init_file) | from_json).unseal_keys_b64[0] }}"
+  no_log: true
+  changed_when: true
+  when: vault_seal.json.initialized and vault_seal.json.sealed

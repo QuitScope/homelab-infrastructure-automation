@@ -1,0 +1,13 @@
+---
+soc_portal_repo: git@github.com:QuitScope/homelab-soc-portal.git
+# Branch, tag or commit. Pin a tag or commit for reproducible deployments.
+soc_portal_version: main
+soc_portal_dir: /opt/homelab-soc-portal
+# Keeps the existing volume homelab-soc-portal_portal-data (SQLite) across redeployments.
+soc_portal_project_name: homelab-soc-portal
+# Read-only GitHub deploy key, generated on the host on the first run.
+soc_portal_deploy_key: /root/.ssh/homelab-soc-portal-deploy
+# The .env lives in HashiCorp Vault (KV v2 homelab/soc-portal, field env); the "ansible" AppRole may read it.
+soc_portal_vault_mount: homelab
+soc_portal_vault_secret: soc-portal
+soc_portal_port: 8090

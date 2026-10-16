@@ -1,0 +1,9 @@
+---
+# Deploys the SOC portal next to Splunk and Cribl. Only the soc_portal role runs here:
+# the base role would enable ufw and cut off the SIEM ports on this host.
+- name: Deploy SOC portal
+  hosts: siem
+  become: true
+
+  roles:
+    - soc_portal

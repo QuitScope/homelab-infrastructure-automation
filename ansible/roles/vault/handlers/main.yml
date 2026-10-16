@@ -1,0 +1,6 @@
+---
+- name: Restart Vault
+  community.docker.docker_compose_v2:
+    project_src: "{{ vault_dir }}"
+    project_name: "{{ vault_project_name }}"
+    state: restarted

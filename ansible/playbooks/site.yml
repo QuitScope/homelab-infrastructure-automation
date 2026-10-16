@@ -1,0 +1,26 @@
+---
+- name: Configure lab VMs
+  hosts: lab
+  become: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Wait until the VM accepts SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+
+    # apt fails while cloud-init still holds the dpkg lock on first boot.
+    # rc 2 means "done with recoverable errors", which is fine here.
+    - name: Wait for cloud-init to finish
+      ansible.builtin.command: cloud-init status --wait
+      register: cloud_init
+      changed_when: false
+      failed_when: cloud_init.rc not in [0, 2]
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
+  roles:
+    - base
+    - docker
+    - rsyslog_cribl

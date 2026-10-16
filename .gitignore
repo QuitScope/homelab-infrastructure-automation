@@ -1,0 +1,9 @@
+.env
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfplan
+crash.log
+*.retry
+.vault_pass*
+.env.bak

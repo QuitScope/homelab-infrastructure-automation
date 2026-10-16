@@ -1,0 +1,30 @@
+---
+- name: Create ARA directory
+  ansible.builtin.file:
+    path: "{{ ara_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install ARA compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ ara_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start ARA API server
+  community.docker.docker_compose_v2:
+    project_src: "{{ ara_dir }}"
+    project_name: "{{ ara_project_name }}"
+    state: present
+
+- name: Wait until the ARA API answers
+  ansible.builtin.uri:
+    url: "http://{{ ara_bind }}:{{ ara_port }}/api/v1/"
+  register: ara_api
+  until: ara_api.status == 200
+  retries: 20
+  delay: 3

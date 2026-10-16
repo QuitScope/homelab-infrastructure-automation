@@ -1,0 +1,9 @@
+---
+# HashiCorp Vault for the homelab secrets. Deploys the server and unseals it after restarts.
+# Vault's own configuration (mounts, policies, AppRoles) lives in terraform/vault.
+- name: Deploy HashiCorp Vault
+  hosts: siem
+  become: true
+
+  roles:
+    - vault
