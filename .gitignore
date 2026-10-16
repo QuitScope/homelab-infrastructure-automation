@@ -7,3 +7,5 @@ crash.log
 *.retry
 .vault_pass*
 .env.bak
+# Vault unseal key and root token (Ansible Vault encrypted) stay local; keep a copy in a password manager.
+ansible/playbooks/files/*/vault-init.json.vault

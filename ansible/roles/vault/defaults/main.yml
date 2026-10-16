@@ -7,4 +7,5 @@ vault_bind: "{{ ansible_host }}"
 vault_port: 8200
 vault_addr: "http://{{ vault_bind }}:{{ vault_port }}"
 # Output of `vault operator init` (unseal key, root token), Ansible Vault encrypted by scripts/vault-init.sh.
+# Git-ignored: it stays on the admin PC and in the password manager.
 vault_init_file: "{{ inventory_hostname }}/vault-init.json.vault"

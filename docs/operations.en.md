@@ -153,8 +153,9 @@ Operations:
 | Backup | `docker exec vault-vault-1 vault operator raft snapshot save /vault/file/backup.snap` (with the root token) |
 
 Important: the unseal key and root token only live in `playbooks/files/siem-docker/vault-init.json.vault`,
-encrypted with the password from `.vault_pass`. If `.vault_pass` is lost, Vault cannot be unsealed after the
-next restart and its data is gone. Keep `.vault_pass` in a password manager as well.
+encrypted with the password from `.vault_pass`. Both files are git-ignored and only exist on the admin PC. If
+either is lost, Vault cannot be unsealed after the next restart and its data is gone. Both are therefore also
+kept in a password manager.
 
 ## Updates
 
@@ -180,7 +181,7 @@ Every change goes through a push; CI must be green before it runs against the la
 | Broken portal update | Redeploy with `-e soc_portal_version=<last good commit>`; the database in the volume is not touched |
 | Vault sealed | `scripts/ansible.sh ansible-playbook playbooks/vault.yml` (tested after `docker restart`) |
 | Vault data lost | Restore a Raft snapshot (`vault operator raft snapshot restore`) or rebuild: apply `terraform/vault` and run `vault-seed.sh`; the sources of the secrets (Proxmox, portal `.env` on siem-docker) remain |
-| `.vault_pass` lost | The unseal key can no longer be read. While Vault still runs unsealed: take a snapshot and re-initialise. Otherwise rebuild Vault (row above) |
+| `.vault_pass` or init file lost | Restore it from the password manager. If it is gone there too, the unseal key is lost: while Vault still runs unsealed, take a snapshot and re-initialise, otherwise rebuild Vault (row above) |
 | Template 900 gone | Linked clones depend on the template's base disk; Proxmox refuses to delete it while clones exist. Rebuild the template from the Ubuntu cloud image and update `template_id` |
 
 ## Secrets
@@ -190,7 +191,7 @@ Every change goes through a push; CI must be green before it runs against the la
 | Proxmox API token | HashiCorp Vault `homelab/proxmox`, read by Terraform at runtime (ephemeral, not in the state) |
 | Portal configuration (Splunk/Cribl access, session secret, admin hash) | HashiCorp Vault `homelab/soc-portal`, read by Ansible at runtime |
 | AppRole role/secret IDs | `.env` (git-ignored); secret IDs also in the local state of `terraform/vault` |
-| Unseal key and root token | `playbooks/files/siem-docker/vault-init.json.vault`, Ansible Vault AES256, committed |
+| Unseal key and root token | `playbooks/files/siem-docker/vault-init.json.vault`, Ansible Vault AES256, local only (git-ignored) with a copy in the password manager |
 | Ansible Vault password | `.vault_pass` (git-ignored), mode 0600 inside the container |
 | Admin PC SSH key | stays in `~/.ssh`, mounted read-only into the container |
 | Deploy key for the portal repository | only on siem-docker, read-only and limited to one repository |

@@ -153,9 +153,9 @@ Betrieb:
 | Backup | `docker exec vault-vault-1 vault operator raft snapshot save /vault/file/backup.snap` (mit Root-Token) |
 
 Wichtig: Unseal-Key und Root-Token liegen nur in `playbooks/files/siem-docker/vault-init.json.vault`,
-verschlüsselt mit dem Passwort aus `.vault_pass`. Geht `.vault_pass` verloren, lässt sich Vault nach dem
-nächsten Neustart nicht mehr entsiegeln und die Daten sind weg. `.vault_pass` gehört deshalb zusätzlich in
-einen Passwortmanager.
+verschlüsselt mit dem Passwort aus `.vault_pass`. Beide Dateien sind git-ignoriert und existieren nur auf dem
+Admin-PC. Geht eine davon verloren, lässt sich Vault nach dem nächsten Neustart nicht mehr entsiegeln und die
+Daten sind weg. Deshalb liegen beide zusätzlich im Passwortmanager.
 
 ## Updates
 
@@ -181,7 +181,7 @@ Jede Änderung geht über einen Push, die CI muss grün sein, bevor sie gegen da
 | Portal-Update fehlerhaft | Mit `-e soc_portal_version=<letzter guter Commit>` erneut deployen; die Datenbank im Volume bleibt unberührt |
 | Vault versiegelt | `scripts/ansible.sh ansible-playbook playbooks/vault.yml` (getestet nach `docker restart`) |
 | Vault-Daten verloren | Raft-Snapshot zurückspielen (`vault operator raft snapshot restore`) oder neu aufbauen: `terraform/vault` anwenden und `vault-seed.sh`, die Quellen der Secrets (Proxmox, Portal-`.env` auf siem-docker) bleiben erhalten |
-| `.vault_pass` verloren | Unseal-Key nicht mehr lesbar. Solange Vault entsiegelt läuft: Snapshot ziehen, neu initialisieren. Sonst Vault neu aufbauen (Zeile darüber) |
+| `.vault_pass` oder Init-Datei verloren | Aus dem Passwortmanager zurückholen. Fehlt sie auch dort, ist der Unseal-Key weg: Solange Vault entsiegelt läuft, Snapshot ziehen und neu initialisieren, sonst Vault neu aufbauen (Zeile darüber) |
 | Template 900 weg | Linked Clones hängen an der Basis-Disk des Templates; Proxmox verhindert das Löschen, solange Clones existieren. Template aus Ubuntu-Cloud-Image neu bauen und `template_id` anpassen |
 
 ## Secrets
@@ -191,7 +191,7 @@ Jede Änderung geht über einen Push, die CI muss grün sein, bevor sie gegen da
 | Proxmox-API-Token | HashiCorp Vault `homelab/proxmox`, zur Laufzeit von Terraform gelesen (ephemeral, nicht im State) |
 | Portal-Konfiguration (Splunk-/Cribl-Zugang, Session-Secret, Admin-Hash) | HashiCorp Vault `homelab/soc-portal`, zur Laufzeit von Ansible gelesen |
 | AppRole-Role-/Secret-IDs | `.env` (git-ignoriert); Secret-IDs zusätzlich im lokalen State von `terraform/vault` |
-| Unseal-Key und Root-Token | `playbooks/files/siem-docker/vault-init.json.vault`, Ansible Vault AES256, im Repo |
+| Unseal-Key und Root-Token | `playbooks/files/siem-docker/vault-init.json.vault`, Ansible Vault AES256, nur lokal (git-ignoriert) und als Kopie im Passwortmanager |
 | Ansible-Vault-Passwort | `.vault_pass` (git-ignoriert), im Container mit Modus 0600 |
 | SSH-Key des Admin-PCs | bleibt in `~/.ssh`, nur lesend in den Container gemountet |
 | Deploy-Key für das Portal-Repo | nur auf siem-docker, read-only und auf ein Repo beschränkt |
